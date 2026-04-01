@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioGraph: 3D Interactive Biology</title>
+    <!-- Modern Typography: Outfit for headers, Inter for readability -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- SVG Icons from Unpkg (Phosphor Icons or equivalent can be used as needed, but we will use raw SVG or plain CSS) -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- ES Module Map for Three.js -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <header class="glass-nav">
+        <div class="logo">
+            <span class="logo-icon">🧬</span>
+            <span class="logo-text">BioGraph.3D</span>
+        </div>
+        <nav>
+            <button class="nav-btn active" id="btn-dna">DNA Explorer</button>
+            <button class="nav-btn" id="btn-tour">Start Guided Tour</button>
+        </nav>
+    </header>
+
+    <!-- Side Panel for Information -->
+    <aside id="info-panel" class="glass-panel hidden">
+        <div class="panel-header">
+            <span class="badge" id="fact-category">Genetics</span>
+            <button id="close-btn" aria-label="Close panel">×</button>
+        </div>
+        <h2 id="fact-title">The Double Helix</h2>
+        <p id="fact-desc">DNA forms a double helix shape, first discovered by Watson, Crick, and Franklin in 1953.</p>
+        
+        <div class="progress-container">
+            <span id="fact-counter">1 / 30 Displayed</span>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="discovery-progress"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Overlay hint text -->
+    <div id="hint-text">
+        <p>Drag to rotate. Scroll to zoom. <br /><strong>Click on glowing nodes to reveal facts!</strong></p>
+    </div>
+
+    <!-- Loading Screen for 10 structural features: 3D loader, graceful hide -->
+    <div id="loader" class="loader-overlay">
+        <div class="spinner"></div>
+        <p>Synthesizing biological data...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="main.js"></script>
+</body>
+</html>
