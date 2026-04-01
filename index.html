@@ -35,6 +35,25 @@
         </nav>
     </header>
 
+    <!-- Diagram Modal -->
+    <div id="diagram-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel-large">
+            <button id="close-modal-btn" aria-label="Close modal">×</button>
+            <div class="modal-header">
+                <span class="badge" id="modal-category">Category</span>
+                <h2 id="modal-title">Title</h2>
+            </div>
+            <div class="modal-body">
+                <div class="diagram-container">
+                    <img id="modal-diagram" src="" alt="Diagram">
+                </div>
+                <div class="modal-text">
+                    <p id="modal-desc">Description</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Side Panel for Information -->
     <aside id="info-panel" class="glass-panel hidden">
         <div class="panel-header">

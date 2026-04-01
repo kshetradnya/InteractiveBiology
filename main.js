@@ -15,6 +15,13 @@ const factCounter = document.getElementById('fact-counter');
 const btnDna = document.getElementById('btn-dna');
 const btnTour = document.getElementById('btn-tour');
 
+const diagramModal = document.getElementById('diagram-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const modalTitle = document.getElementById('modal-title');
+const modalDesc = document.getElementById('modal-desc');
+const modalCategory = document.getElementById('modal-category');
+const modalDiagram = document.getElementById('modal-diagram');
+
 // State
 let discoveredFacts = new Set();
 let tourMode = false;
@@ -146,13 +153,25 @@ window.addEventListener('mousemove', (e) => {
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 });
 
-window.addEventListener('click', () => {
+window.addEventListener('click', (e) => {
+    // Avoid triggering when clicking UI elements or if modal is already open
+    if (e.target.closest('button') || e.target.closest('.glass-panel') || e.target.closest('.glass-panel-large') || !diagramModal.classList.contains('hidden')) {
+        return;
+    }
+
     if (hoveredNode) {
-        displayFact(hoveredNode);
+        if (tourMode) {
+            tourMode = false;
+            btnTour.textContent = "Start Guided Tour";
+            btnTour.classList.remove('active');
+            btnDna.classList.add('active');
+            clearTimeout(tourTimeout);
+        }
+        displayFact(hoveredNode, true);
     }
 });
 
-function displayFact(node) {
+function displayFact(node, openWindow = false) {
     const fact = node.userData.fact;
     
     // Update Node Appearance
@@ -170,6 +189,16 @@ function displayFact(node) {
     factDesc.textContent = fact.description;
     
     infoPanel.classList.remove('hidden');
+
+    if (openWindow) {
+        modalCategory.textContent = fact.category;
+        modalTitle.textContent = fact.title;
+        modalDesc.textContent = fact.description;
+        const encodedTitle = encodeURIComponent(fact.title);
+        // Generates a nice placeholder diagram
+        modalDiagram.src = `https://placehold.co/1200x600/0f172a/0ea5e9?font=montserrat&text=Detailed+Diagram:+${encodedTitle}`;
+        diagramModal.classList.remove('hidden');
+    }
 
     // Camera Animation to Node
     const targetY = node.position.y;
@@ -200,6 +229,16 @@ closeBtn.addEventListener('click', () => {
     infoPanel.classList.add('hidden');
 });
 
+closeModalBtn.addEventListener('click', () => {
+    diagramModal.classList.add('hidden');
+});
+
+diagramModal.addEventListener('click', (e) => {
+    if (e.target === diagramModal) {
+        diagramModal.classList.add('hidden');
+    }
+});
+
 btnTour.addEventListener('click', () => {
     tourMode = !tourMode;
     if (tourMode) {
@@ -227,7 +266,7 @@ function startTour() {
     if(!tourMode) return;
     if(tourIndex >= nodes.length) tourIndex = 0;
     
-    displayFact(nodes[tourIndex]);
+    displayFact(nodes[tourIndex], false);
     tourIndex++;
     
     tourTimeout = setTimeout(startTour, 4000);
