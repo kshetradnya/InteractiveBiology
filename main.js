@@ -20,7 +20,7 @@ const closeModalBtn = document.getElementById('close-modal-btn');
 const modalTitle = document.getElementById('modal-title');
 const modalDesc = document.getElementById('modal-desc');
 const modalCategory = document.getElementById('modal-category');
-const modalDiagram = document.getElementById('modal-diagram');
+const modalDiagramContainer = document.getElementById('modal-diagram-container');
 
 // State
 let discoveredFacts = new Set();
@@ -194,10 +194,11 @@ function displayFact(node, openWindow = false) {
         modalCategory.textContent = fact.category;
         modalTitle.textContent = fact.title;
         modalDesc.textContent = fact.description;
-        const encodedTitle = encodeURIComponent(fact.title);
-        // Generates a nice placeholder diagram
-        modalDiagram.src = `https://placehold.co/1200x600/0f172a/0ea5e9?font=montserrat&text=Detailed+Diagram:+${encodedTitle}`;
+        
         diagramModal.classList.remove('hidden');
+        if (modal3D) {
+            modal3D.open(fact);
+        }
     }
 
     // Camera Animation to Node
@@ -231,11 +232,13 @@ closeBtn.addEventListener('click', () => {
 
 closeModalBtn.addEventListener('click', () => {
     diagramModal.classList.add('hidden');
+    if (modal3D) modal3D.close();
 });
 
 diagramModal.addEventListener('click', (e) => {
     if (e.target === diagramModal) {
         diagramModal.classList.add('hidden');
+        if (modal3D) modal3D.close();
     }
 });
 
@@ -271,6 +274,216 @@ function startTour() {
     
     tourTimeout = setTimeout(startTour, 4000);
 }
+
+// ---- Secondary 3D Modal System ----
+function createModal3DScene() {
+    const width = modalDiagramContainer.clientWidth || 800;
+    const height = modalDiagramContainer.clientHeight || 400;
+
+    const modalScene = new THREE.Scene();
+    modalScene.fog = new THREE.FogExp2(0x020617, 0.05);
+
+    const modalCamera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
+    modalCamera.position.z = 25;
+
+    const modalRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    modalRenderer.setSize(width, height);
+    modalRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    modalDiagramContainer.appendChild(modalRenderer.domElement);
+
+    const modalControls = new OrbitControls(modalCamera, modalRenderer.domElement);
+    modalControls.enableDamping = true;
+    modalControls.dampingFactor = 0.05;
+    modalControls.autoRotate = true;
+    modalControls.autoRotateSpeed = 2.0;
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    modalScene.add(ambient);
+    const pointLight = new THREE.PointLight(0x0ea5e9, 3, 100);
+    pointLight.position.set(10, 15, 10);
+    modalScene.add(pointLight);
+    const pointLight2 = new THREE.PointLight(0x22c55e, 2, 100);
+    pointLight2.position.set(-10, -15, -10);
+    modalScene.add(pointLight2);
+
+    let currentObject = null;
+    let animId = null;
+    let isAnimating = false;
+
+    function animateModal() {
+        if (!isAnimating) return;
+        animId = requestAnimationFrame(animateModal);
+        modalControls.update();
+        if(currentObject && currentObject.userData.updateFunc) {
+            currentObject.userData.updateFunc();
+        }
+        modalRenderer.render(modalScene, modalCamera);
+    }
+
+    function buildGeometry(fact) {
+        if (currentObject) {
+            modalScene.remove(currentObject);
+        }
+
+        currentObject = new THREE.Group();
+        const category = fact.category;
+
+        const mainMat = new THREE.MeshPhysicalMaterial({
+            color: 0x94a3b8, metalness: 0.2, roughness: 0.3, transmission: 0.6, thickness: 1.0
+        });
+        
+        if (category === "Genetics" || category === "Molecular Biology" || category === "Biotechnology") {
+            mainMat.color.setHex(0x0ea5e9);
+            mainMat.emissive.setHex(0x000000);
+            for(let i=0; i<8; i++) {
+                const angle = i * 0.8;
+                const y = (i - 4) * 1.5;
+                const node1 = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mainMat);
+                node1.position.set(Math.cos(angle)*3, y, Math.sin(angle)*3);
+                currentObject.add(node1);
+                
+                const node2 = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mainMat);
+                node2.position.set(Math.cos(angle+Math.PI)*3, y, Math.sin(angle+Math.PI)*3);
+                currentObject.add(node2);
+                
+                const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 6), new THREE.MeshBasicMaterial({color:0x334155}));
+                bar.position.set(0, y, 0);
+                bar.rotation.x = Math.PI/2;
+                bar.rotation.z = -angle;
+                currentObject.add(bar);
+            }
+        } else if (category === "Cytology" || category === "Cell Biology") {
+            const cellMat = mainMat.clone();
+            cellMat.color.setHex(0x22c55e);
+            cellMat.transparent = true; cellMat.opacity = 0.3;
+            const membrane = new THREE.Mesh(new THREE.SphereGeometry(6, 32, 32), cellMat);
+            currentObject.add(membrane);
+            
+            const nucleusMat = mainMat.clone();
+            nucleusMat.color.setHex(0x0ea5e9);
+            const nucleus = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), nucleusMat);
+            nucleus.position.set(1.5, 0, 1.5);
+            currentObject.add(nucleus);
+            
+            for(let i=0; i<6; i++) {
+                const organelle = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 8, 8), mainMat);
+                organelle.position.set((Math.random()-0.5)*8, (Math.random()-0.5)*8, (Math.random()-0.5)*8);
+                organelle.rotation.set(Math.random(), Math.random(), Math.random());
+                currentObject.add(organelle);
+            }
+        } else if (category === "Biochemistry" || category === "Physiology") {
+            const molMat = mainMat.clone();
+            molMat.color.setHex(0x8b5cf6); // Purple
+            for(let i=0; i<18; i++) {
+                const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2), molMat);
+                mesh.position.set((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10);
+                currentObject.add(mesh);
+                
+                const link = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshBasicMaterial({color:0x475569}));
+                link.position.copy(mesh.position);
+                link.lookAt(0,0,0);
+                currentObject.add(link);
+            }
+        } else if (category === "Histology" || category === "Immunology") {
+            const redMat = mainMat.clone();
+            redMat.color.setHex(0xef4444); // Red
+            const whiteMat = mainMat.clone();
+            whiteMat.color.setHex(0xf8fafc); // White
+            
+            for(let i=0; i<7; i++) {
+                const rbc = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.9, 16, 32), redMat);
+                rbc.scale.z = 0.5;
+                rbc.position.set((Math.random()-0.5)*12, (Math.random()-0.5)*12, (Math.random()-0.5)*12);
+                rbc.rotation.set(Math.random(), Math.random(), Math.random());
+                currentObject.add(rbc);
+            }
+            const wbc = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5, 1), whiteMat);
+            wbc.position.set(0, 0, 0);
+            currentObject.add(wbc);
+        } else if (category === "Botany" || category === "Ecology" || category === "Mycology") {
+            mainMat.color.setHex(0x10b981); // Emerald
+            for(let j=0; j<5; j++) {
+                const stack = new THREE.Group();
+                for(let i=0; i<4; i++) {
+                    const disc = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.4, 16), mainMat);
+                    disc.position.y = i * 0.7;
+                    stack.add(disc);
+                }
+                stack.position.set((Math.random()-0.5)*10, (Math.random()-0.5)*6, (Math.random()-0.5)*10);
+                stack.rotation.set(Math.random(), Math.random(), Math.random());
+                currentObject.add(stack);
+            }
+        } else if (category === "Virology" || category === "Microbiology") {
+            mainMat.color.setHex(0xf59e0b); // Amber
+            const body = new THREE.Mesh(new THREE.IcosahedronGeometry(3.5, 0), mainMat);
+            body.position.y = 2.5;
+            currentObject.add(body);
+            
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 3), mainMat);
+            neck.position.y = -0.5;
+            currentObject.add(neck);
+            
+            for(let i=0; i<6; i++) {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.1, 5), mainMat);
+                const angle = (i/6) * Math.PI * 2;
+                leg.position.set(Math.cos(angle)*2.5, -3.5, Math.sin(angle)*2.5);
+                leg.rotation.z = Math.cos(angle) * 0.6;
+                leg.rotation.x = -Math.sin(angle) * 0.6;
+                currentObject.add(leg);
+            }
+        } else {
+            mainMat.color.setHex(0x0ea5e9);
+            const core = new THREE.Mesh(new THREE.OctahedronGeometry(2.5, 0), mainMat);
+            currentObject.add(core);
+            for(let i=0; i<10; i++) {
+                const spike = new THREE.Mesh(new THREE.ConeGeometry(0.4, 9), mainMat);
+                spike.position.set((Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2);
+                spike.lookAt((Math.random()-0.5)*15, (Math.random()-0.5)*15, (Math.random()-0.5)*15);
+                currentObject.add(spike);
+            }
+        }
+
+        modalScene.add(currentObject);
+    }
+
+    window.addEventListener('resize', () => {
+        if (!diagramModal.classList.contains('hidden')) {
+            const w = modalDiagramContainer.clientWidth;
+            const h = modalDiagramContainer.clientHeight;
+            modalCamera.aspect = w / h;
+            modalCamera.updateProjectionMatrix();
+            modalRenderer.setSize(w, h);
+        }
+    });
+
+    return {
+        open: (fact) => {
+            buildGeometry(fact);
+            isAnimating = true;
+            
+            setTimeout(() => {
+                const w = modalDiagramContainer.clientWidth || 800;
+                const h = modalDiagramContainer.clientHeight || 400;
+                modalCamera.aspect = w / h;
+                modalCamera.updateProjectionMatrix();
+                modalRenderer.setSize(w, h);
+            }, 50);
+
+            if (!animId) {
+                animateModal();
+            }
+        },
+        close: () => {
+            isAnimating = false;
+            if (animId) {
+                cancelAnimationFrame(animId);
+                animId = null;
+            }
+        }
+    };
+}
+
+let modal3D = createModal3DScene();
 
 // ---- Animation Loop ----
 const clock = new THREE.Clock();

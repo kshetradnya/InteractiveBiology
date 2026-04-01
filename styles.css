@@ -206,6 +206,12 @@ nav {
     box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
 }
 
+.diagram-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    outline: none;
+}
+
 #modal-diagram {
     width: 100%;
     height: 100%;
