@@ -20,7 +20,12 @@ const closeModalBtn = document.getElementById('close-modal-btn');
 const modalTitle = document.getElementById('modal-title');
 const modalDesc = document.getElementById('modal-desc');
 const modalCategory = document.getElementById('modal-category');
-const modalDiagramContainer = document.getElementById('modal-diagram-container');
+const modalDiagramContainer = document.getElementById('modal-diagram-container') || document.querySelector('.diagram-container');
+
+// Clear out old cached HTML images if they exist
+if (modalDiagramContainer) {
+    modalDiagramContainer.innerHTML = '';
+}
 
 // State
 let discoveredFacts = new Set();
@@ -277,6 +282,8 @@ function startTour() {
 
 // ---- Secondary 3D Modal System ----
 function createModal3DScene() {
+    if (!modalDiagramContainer) return null;
+
     const width = modalDiagramContainer.clientWidth || 800;
     const height = modalDiagramContainer.clientHeight || 400;
 
@@ -288,7 +295,7 @@ function createModal3DScene() {
 
     const modalRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     modalRenderer.setSize(width, height);
-    modalRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    modalRenderer.setPixelRatio(window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1);
     modalDiagramContainer.appendChild(modalRenderer.domElement);
 
     const modalControls = new OrbitControls(modalCamera, modalRenderer.domElement);
